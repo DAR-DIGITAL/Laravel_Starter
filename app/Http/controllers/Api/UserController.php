@@ -1,71 +1,88 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+use Illuminate\Http\Response;
 
-use App\Models\User;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Services\UserService;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request )
+    protected $userService;
 
+    public function __construct(UserService $userService)
     {
+        $this->userService = $userService;
+    }
+    
+    public function index(Request $request)
+    {
+        $params = $request->all();
 
-        $users = User::all();
-        return  UserResource::collection($users);
+        $data = User::query()
+            ->when(!empty($params['role']), function (Builder $query) use ($params) {
+                $query->whereHas('roles', function ($q) use ($params) {
+                    $q->where('name', $params['role']);
+                });
+            })
+            ->when(!empty($params['keyword']), function (Builder $query) use ($params) {
+                $query->where(function ($q) use ($params) {
+                    $q->where('firstname', 'like', '%' . $params['keyword'] . '%')
+                        ->orWhere('lastname', 'like', '%' . $params['keyword'] . '%')
+                        ->orWhere('reference', 'like', '%' . $params['keyword'] . '%')
+                        ->orWhere('email', 'like', '%' . $params['keyword'] . '%');
+                });
+            })
+            ->paginate($params['per_page'] ?? 10);
+
+        return UserResource::collection($data);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    public function getStats(Request $request): Response
+    {
+
+        $params = $request->all();
+
+        return response($this->userService->getStats($params), Response::HTTP_OK);
+    }
+
+
+    public function show($id)
+    {
+        $user = $this->userService->getUserById($id);
+        return new UserResource($user);
+    }
+
     public function store(Request $request)
     {
-        $data = $request->all();
-       $user = new User();
-       $user->name = $data['name'];
-       $user->email =  $data['email'];
-       $user->password = $data['password'];
-       $user->save();
-       return $user;
-
+        $user = $this->userService->createNewTenantUser($request);
+        return new UserResource($user);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(User $user)
+    public function update(Request $request, $id)
     {
-    
-       return  new UserResource($user);
+
+        $user = $this->userService->updateUser($id, $request);
+
+        return new UserResource($user);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-
-    }
-    public function update(Request $request, User $user)
+    public function destroy($id)
     {
-    
-        $data = $request->all();
-     
-        $user->name = $data['name'];
-        $user->email =  $data['email'];
-        $user->password = $data['password'];
-        $user->save();
-        return $user;
+        $this->userService->deleteUser($id);
+
+        return response()->json(['message' => 'User deleted successfully']);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function assignRoles(Request $request, User $user)
     {
-        //
+        $roles = $request->input('roles', []);
+        $user->syncRoles($roles);
+
+        return response()->json(['message' => 'Roles assigned successfully']);
     }
+
 }

@@ -16,8 +16,10 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Admin User',
-            'email' => 'admin@dardigital.com',
+            'first_name' => 'JeSwitch',
+            'last_name' => 'Admin',
+
+            'email' => 'admin@jeswitch.com',
         ]);
         $this->call(UsersTableSeeder::class);
     

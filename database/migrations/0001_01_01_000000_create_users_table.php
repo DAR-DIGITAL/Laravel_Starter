@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -13,11 +14,17 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('first_name');
+            $table->string('last_name');
             $table->string('email')->unique();
             $table->string('password', 150)->nullable();
-            $table->string('full_name', 50)->nullable();
+            $table->string('gender', 10)->nullable();
+            $table->string('city', 50)->nullable();
+            $table->string('country', 50)->nullable();
+            $table->string('address', 255)->nullable();
             $table->string('phone', 45)->nullable();
+            $table->date('birthday')->nullable();
+            $table->string('ref', 255)->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
@@ -43,8 +50,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };
